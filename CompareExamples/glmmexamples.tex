@@ -1,0 +1,514 @@
+\documentclass{article}
+
+\usepackage{amsthm,amsmath,amssymb,indentfirst,float}
+\usepackage{verbatim}
+\usepackage[sort,longnamesfirst]{natbib}
+\newcommand{\pcite}[1]{\citeauthor{#1}'s \citeyearpar{#1}}
+\newcommand{\ncite}[1]{\citeauthor{#1}, \citeyear{#1}}
+
+\usepackage{geometry}
+%\geometry{hmargin=1.025in,vmargin={1.25in,2.5in},nohead,footskip=0.5in} 
+%\geometry{hmargin=1.025in,vmargin={1.25in,0.75in},nohead,footskip=0.5in} 
+\geometry{hmargin=2.5cm,vmargin={2.5cm,2.5cm},nohead,footskip=0.5in}
+
+\renewcommand{\baselinestretch}{1.25}
+
+\usepackage{amsbsy,amsmath,amsthm,amssymb,graphicx}
+
+\setlength{\baselineskip}{0.3in} \setlength{\parskip}{.05in}
+
+
+\newcommand{\gbar}{\bar g}
+\newcommand{\cvgindist}{\overset{\text{d}}{\longrightarrow}}
+\DeclareMathOperator{\PR}{Pr} \DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\cov}{Cov}
+\newcommand{\eps}{\epsilon}
+\newtheorem{claim}{Claim}
+
+\newcommand{\sX}{{\mathsf X}}
+\newcommand{\tQ}{\tilde Q}
+\newcommand{\cU}{{\cal U}}
+\newcommand{\cX}{{\cal X}}
+\newcommand{\tbeta}{\tilde{\beta}}
+\newcommand{\tlambda}{\tilde{\lambda}}
+\newcommand{\txi}{\tilde{\xi}}
+
+
+
+\def\baro{\vskip  .2truecm\hfill \hrule height.5pt \vskip  .2truecm}
+\def\barba{\vskip -.1truecm\hfill \hrule height.5pt \vskip .4truecm}
+
+\title{R package \texttt{glmm}}
+
+\author{Christina Knudson}
+
+\begin{document}
+\maketitle{}
+
+\section{Bacteria example}
+The MASS package contains the command \texttt{glmmPQL} and the bacteria data-set. The manual describes the data set as follows: ``Tests of the presence of the bacteria H. influenzae in children with otitis media in the Northern Territory of Australia.''
+
+The data were fit using \texttt{glmmPQL},  \texttt{glmer}  from the \texttt{lme4} package (method implemented was Laplace approximation),  \texttt{glmm} with $m=10^4$,  \texttt{glmm} with $m=10^5$, and \texttt{glmm} with $m=10^6$. (The data did need to be reformatted in a process described at the end of the document). The parameter estimates are summarized in the following table. More model details can be seen in the output that follows the table.
+
+\begin{tabular}{lccccc}
+& Intercept & trtdrug & trtdrug+ & I(week$>2$) TRUE & $\nu$ \\ \hline
+\texttt{glmmPQL} & 3.41 & -1.25 & -.75 & -1.61 & 1.99\\
+\texttt{glmer} & 3.55 & -1.37 & -.78 & -1.60 & 1.54\\
+\texttt{glmm} $m=10^4$ & 3.57 & -1.38 & -.80 & -1.62 & 1.66 \\
+\texttt{glmm} $m=10^5$ & 3.60& -1.39 & -.79 & -1.63 & 1.73 \\
+\texttt{glmm} $m=10^6$ & 3.58& -1.37 & -.79 & -1.63 & 1.71 \\
+\end{tabular}
+
+
+
+The \texttt{glmmPQL} results:
+\begin{verbatim}
+> bac.pql<-glmmPQL(y ~ trt + I(week > 2), random = ~ 1 | ID,
++                 family = binomial, data = bacteria)
+> summary(bac.pql)
+Linear mixed-effects model fit by maximum likelihood
+ Data: bacteria 
+  AIC BIC logLik
+   NA  NA     NA
+
+Random effects:
+ Formula: ~1 | ID
+        (Intercept)  Residual
+StdDev:    1.410637 0.7800511
+
+Variance function:
+ Structure: fixed weights
+ Formula: ~invwt 
+Fixed effects: y ~ trt + I(week > 2) 
+                    Value Std.Error  DF   t-value p-value
+(Intercept)      3.412014 0.5185033 169  6.580506  0.0000
+trtdrug         -1.247355 0.6440635  47 -1.936696  0.0588
+trtdrug+        -0.754327 0.6453978  47 -1.168779  0.2484
+I(week > 2)TRUE -1.607257 0.3583379 169 -4.485311  0.0000
+ Correlation: 
+                (Intr) trtdrg trtdr+
+trtdrug         -0.598              
+trtdrug+        -0.571  0.460       
+I(week > 2)TRUE -0.537  0.047 -0.001
+
+Standardized Within-Group Residuals:
+       Min         Q1        Med         Q3        Max 
+-5.1985361  0.1572336  0.3513075  0.4949482  1.7448845 
+
+Number of Observations: 220
+Number of Groups: 50 
+\end{verbatim}
+
+\begin{verbatim}
+proc.time()-ptm
+user  system elapsed 
+ 16.226   0.044  16.281 
+> summary(bac.glmm2)
+
+Call:
+glmm(fixed = y2 ~ trt + I(week > 2), random = list(~0 + ID), 
+    varcomps.names = c("ID"), data = bacteria, family.glmm = bernoulli.glmm, 
+    m = 10^4)
+
+Fixed Effects:
+                Estimate Std. Error z value Pr(>|z|)    
+(Intercept)       3.5745     0.6371   5.611 2.01e-08 ***
+trtdrug          -1.3779     0.6701  -2.056 0.039768 *  
+trtdrug+         -0.8014     0.6878  -1.165 0.243950    
+I(week > 2)TRUE  -1.6224     0.4674  -3.471 0.000518 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+   Estimate Std. Error z value Pr(>|z|)/2  
+ID   1.6635     0.7807   2.131     0.0165 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+\end{verbatim}
+
+Results from  \texttt{glmm}  with $m=10^5$.
+\begin{verbatim}
+> bac.glmm2<-glmm(y2~trt+I(week > 2),list(~0+ID), family=bernoulli.glmm, data=bacteria, m=10^5, varcomps.names=c("ID"))
+> proc.time()-ptm
+   user  system elapsed 
+175.729   0.150 176.211 
+> summary(bac.glmm2)
+
+Call:
+glmm(fixed = y2 ~ trt + I(week > 2), random = list(~0 + ID), 
+    varcomps.names = c("ID"), data = bacteria, family.glmm = bernoulli.glmm, 
+    m = 10^5)
+
+Fixed Effects:
+                Estimate Std. Error z value Pr(>|z|)    
+(Intercept)       3.6008     0.7666   4.697 2.64e-06 ***
+trtdrug          -1.3868     0.7126  -1.946 0.051641 .  
+trtdrug+         -0.7940     0.6996  -1.135 0.256348    
+I(week > 2)TRUE  -1.6321     0.4917  -3.319 0.000903 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+   Estimate Std. Error z value Pr(>|z|)/2  
+ID    1.738      1.317    1.32     0.0935 .
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+\end{verbatim}
+
+Results from \texttt{glmm} with $m=10^6$.
+\begin{verbatim}
+ proc.time()-ptm
+    user   system  elapsed 
+1491.511    1.299 1494.133 
+> summary(bac.glmm2)
+
+Call:
+glmm(fixed = y2 ~ trt + I(week > 2), random = list(~0 + ID), 
+    varcomps.names = c("ID"), data = bacteria, family.glmm = bernoulli.glmm, 
+    m = 10^6)
+
+Fixed Effects:
+                Estimate Std. Error z value Pr(>|z|)    
+(Intercept)       3.5824     0.6952   5.153 2.57e-07 ***
+trtdrug          -1.3714     0.6935  -1.978 0.047980 *  
+trtdrug+         -0.7929     0.7034  -1.127 0.259644    
+I(week > 2)TRUE  -1.6278     0.4801  -3.391 0.000698 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+   Estimate Std. Error z value Pr(>|z|)/2  
+ID    1.707      1.050   1.626      0.052 .
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+\end{verbatim}
+
+Results from \texttt{lme4}.
+\begin{verbatim}
+ summary(bac.glmer)
+Generalized linear mixed model fit by maximum likelihood (Laplace
+  Approximation) [glmerMod]
+ Family: binomial ( logit )
+Formula: y2 ~ trt + I(week > 2) + (1 | ID)
+   Data: bacteria
+
+     AIC      BIC   logLik deviance df.resid 
+   202.3    219.2    -96.1    192.3      215 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-4.5615  0.1359  0.3022  0.4217  1.1276 
+
+Random effects:
+ Groups Name        Variance Std.Dev.
+ ID     (Intercept) 1.543    1.242   
+Number of obs: 220, groups: ID, 50
+
+Fixed effects:
+                Estimate Std. Error z value Pr(>|z|)    
+(Intercept)       3.5479     0.6958   5.099 3.41e-07 ***
+trtdrug          -1.3667     0.6770  -2.019 0.043517 *  
+trtdrug+         -0.7826     0.6831  -1.146 0.251926    
+I(week > 2)TRUE  -1.5985     0.4759  -3.359 0.000783 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) trtdrg trtdr+
+trtdrug     -0.593              
+trtdrug+    -0.537  0.487       
+I(wk>2)TRUE -0.656  0.126  0.064
+> 
+\end{verbatim}
+
+\section{Herd CBPP Example}
+The cbpp dataset is located in the lme4 package. The lme4 package describes it thusly: ``Contagious bovine pleuropneumonia (CBPP) is a major disease of cattle in Africa, caused by a
+mycoplasma. This dataset describes the serological incidence of CBPP in zebu cattle during a
+follow-up survey implemented in 15 commercial herds located in the Boji district of Ethiopia. The
+goal of the survey was to study the within-herd spread of CBPP in newly infected herds. Blood
+samples were quarterly collected from all animals of these herds to determine their CBPP status.
+These data were used to compute the serological incidence of CBPP (new cases occurring during a given time period). Some data are missing (lost to follow-up).''
+
+First, I fit the data using glmer in lme4. The model summary says it was fit with Adaptive Hermite Quadrature with 9 quadrature nodes. Then I fit the data using \texttt{glmm}with $m=10^4$. This took 16.75 minutes on my netbook. The point estimates and some of the standard errors are very similar between the two  methods of model-fitting. 
+
+\begin{tabular}{lccccc}
+& Intercept & period2 & period3 & period4 & $\nu$ \\ \hline
+glmer (numerical integration) & -1.40 & -.99 & -1.13 & -1.58 & .41\\
+\texttt{glmm}$m=10^4$ & -1.42 & -.99 & -1.13 & -1.58 & .44 \\
+\end{tabular}
+
+
+Here are the full results from glmer:
+\begin{verbatim}
+> summary(gm1)
+Generalized linear mixed model fit by maximum likelihood (Laplace
+  Approximation) [glmerMod]
+ Family: binomial ( logit )
+Formula: cbind(incidence, size - incidence) ~ period + (1 | herd)
+   Data: cbpp
+
+     AIC      BIC   logLik deviance df.resid 
+   194.1    204.2    -92.0    184.1       51 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.3816 -0.7889 -0.2026  0.5142  2.8791 
+
+Random effects:
+ Groups Name        Variance Std.Dev.
+ herd   (Intercept) 0.4123   0.6421  
+Number of obs: 56, groups: herd, 15
+
+Fixed effects:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)  -1.3983     0.2312  -6.048 1.47e-09 ***
+period2      -0.9919     0.3032  -3.272 0.001068 ** 
+period3      -1.1282     0.3228  -3.495 0.000474 ***
+period4      -1.5797     0.4220  -3.743 0.000182 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+        (Intr) perid2 perid3
+period2 -0.363              
+period3 -0.340  0.280       
+period4 -0.260  0.213  0.198
+
+\end{verbatim}
+
+Next, the results using \texttt{glmm}with $m=10^4$:
+\begin{verbatim}
+> summary(herd.glmm1)
+
+Call:
+glmm(fixed = Y ~ period, random = list(~0 + herd), varcomps.names = c("herd"), 
+    data = herddat, family.glmm = bernoulli.glmm, m = 10^4)
+
+Fixed Effects:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)  -1.4166     0.2410  -5.879 4.14e-09 ***
+period2      -0.9921     0.3078  -3.223 0.001271 ** 
+period3      -1.1289     0.3277  -3.445 0.000571 ***
+period4      -1.5789     0.4293  -3.678 0.000235 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+     Estimate Std. Error z value Pr(>|z|)/2  
+herd   0.4354     0.2488    1.75     0.0401 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+\end{verbatim}
+
+
+\section{Salamander}
+The salamander dataset represents success or failure in matings between two types of salamanders denoted by R and W. Four types of crosses are possible: RR, RW, WR, WW. These are the fixed effects. There is a random effect for each female salamander and for each male salamander. Thus, there are two variance components: one for the females and one for the males. The response is binary: whether or not the mating was successful.
+
+I fit the salamander data set using  my \texttt{glmm} package (with $m=10^4$ twice and with $m=10^6$ once)  and compared those results to the MCEM results of Booth and Hobert. They do not look so great, and the $m=10^6$ results took 41 hours to get.
+
+\begin{tabular}{lcccccc}
+& Intercept & RW & WR & WW & $\nu_F$ & $\nu_M$ \\ \hline
+MCEM (B+H) & 1.03 & .32 & -1.95 & .99 & 1.4 & 1.25 \\
+\texttt{glmm} $m=10^5$ &   0.964      -0.645      -2.767      -0.008
+\end{tabular}
+
+
+
+
+
+
+
+
+
+\section{Murder}
+Subjects were asked how many victims of homicide they personally knew. The data set is from Agresti's \textit{Categorical Data Analysis} book. I found similar answers from my glmm package as from \texttt{glmmPQL}.
+
+The results from my package:
+
+\begin{verbatim}
+set.seed(1234)
+murder.glmm<- glmm(y~race ,random=list(~0+black,~0+white), varcomps.names=c("black","white"), data=murder ,family.glmm=poisson.glmm,m=10^4)
+
+> summary(murder.glmm)
+
+Call:
+glmm(fixed = y ~ race, random = list(~0 + black, ~0 + white), 
+    varcomps.names = c("black", "white"), data = murder, family.glmm = poisson.glmm, 
+    m = 10^4)
+
+Fixed Effects:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)  0.42003    0.06428   6.534 6.40e-11 ***
+raceWhite   -0.33179    0.07021  -4.726 2.29e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+       Estimate Std. Error z value Pr(>|z|)/2
+black 6.468e-10  3.452e-09   0.187      0.426
+white 2.667e-10  1.596e-09   0.167      0.434
+\end{verbatim}
+
+When I make the sample size drastically smaller so that the analysis takes only about a minute, the results are very similar still.
+\begin{verbatim}
+> summary(murder.glmm)
+
+Call:
+glmm(fixed = y ~ race, random = list(~0 + black, ~0 + white), 
+    varcomps.names = c("black", "white"), data = murder, family.glmm = poisson.glmm, 
+    m = 10^2)
+
+Fixed Effects:
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)  0.42003    0.06428   6.534 6.39e-11 ***
+raceWhite   -0.33179    0.07021  -4.726 2.29e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Variance Components for Random Effects (P-values are one-tailed):
+       Estimate Std. Error z value Pr(>|z|)/2
+black 1.190e-09  1.718e-09   0.693      0.244
+white 1.070e-08  1.440e-08   0.743      0.229
+
+\end{verbatim}
+
+The murder model resulting from \texttt{glmmPQL}:
+\begin{verbatim}
+> murder.pql<-glmmPQL(y~race,random=~1|race,data=murder,family=poisson)iteration 1
+> summary(murder.pql)
+Linear mixed-effects model fit by maximum likelihood
+ Data: murder 
+  AIC BIC logLik
+   NA  NA     NA
+
+Random effects:
+ Formula: ~1 | race
+         (Intercept)  Residual
+StdDev: 9.157794e-06 0.4647694
+
+Variance function:
+ Structure: fixed weights
+ Formula: ~invwt 
+Fixed effects: y ~ race 
+                 Value  Std.Error   DF   t-value p-value
+(Intercept)  0.4200335 0.02989812 1306  14.04883       0
+raceWhite   -0.3317900 0.03265396    0 -10.16079     NaN
+ Correlation: 
+          (Intr)
+raceWhite -0.916
+
+Standardized Within-Group Residuals:
+       Min         Q1        Med         Q3        Max 
+-0.9104427 -0.1899269 -0.1899269 -0.1899269 12.1624898 
+
+Number of Observations: 1308
+Number of Groups: 2 
+Warning message:
+In pt(-abs(tTable[, "t-value"]), tTable[, "DF"]) : NaNs produced
+
+\end{verbatim}
+
+%\section{Booth and Hobert}
+%Here are the results from my glmm package fitting a model to the Booth and Hobert data (with $m=10^4$).
+%\begin{verbatim}
+%> set.seed(1234)
+%> mod.mcml1<-glmm(y~0+x1,list(y~0+z1),varcomps.names=c("z1"),data=BoothHobert,family.glmm=bernoulli.glmm,m=10^4,doPQL=TRUE)
+%[1] "PQL estimates have been identified."
+%> summary(mod.mcml1)
+%
+%Call:
+%glmm(fixed = y ~ 0 + x1, random = list(y ~ 0 + z1), varcomps.names = c("z1"), 
+%    data = BoothHobert, family.glmm = bernoulli.glmm, m = 10^4, 
+%    doPQL = TRUE)
+%
+%Fixed Effects:
+%   Estimate Std. Error z value Pr(>|z|)    
+%x1    6.225      1.422   4.377  1.2e-05 ***
+%---
+%Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+%
+%
+%Variance Components for Random Effects (P-values are one-tailed):
+%   Estimate Std. Error z value Pr(>|z|)/2
+%z1    1.907      1.814   1.051      0.147
+%
+%
+%\end{verbatim}
+%
+%Here are the results from glmmPQL:
+%\begin{verbatim}
+%> summary(bh)
+%Linear mixed-effects model fit by maximum likelihood
+% Data: BoothHobert 
+%  AIC BIC logLik
+%   NA  NA     NA
+%
+%Random effects:
+% Formula: ~1 | z1
+%        (Intercept)  Residual
+%StdDev:    1.284666 0.8712694
+%
+%Variance function:
+% Structure: fixed weights
+% Formula: ~invwt 
+%Fixed effects: y ~ 0 + x1 
+%      Value Std.Error  DF  t-value p-value
+%x1 5.857223  1.008231 140 5.809405       0
+%
+%Standardized Within-Group Residuals:
+%        Min          Q1         Med          Q3         Max 
+%-8.55346135  0.07317618  0.17063844  0.35776723  2.15976654 
+%
+%Number of Observations: 150
+%Number of Groups: 10 
+%\end{verbatim}
+
+
+\section{Reformatting the Datsets}
+\subsection{Bacteria Reformatting}
+The issue with the bacteria dataset is the response was y/n rather than 1/0. I created a new response that changed the y to 1 and the n to 0.
+
+\begin{verbatim}
+bacteria$y2<-as.integer(bacteria$y)-1
+\end{verbatim}
+\subsection{CBPP Reformatting}
+The cbpp dataset was created for binomial but my package was written for Bernoulli responses. In other words, my package needs a row for each success or failure. I did this in the following way:
+\begin{verbatim}
+cbpp$nonincidence<-cbpp$size-cbpp$incidence #number of "failures"
+herddat<-matrix(data=NA,nrow=842,ncol=3)
+colnames(herddat)<-c("Y","period","herd")
+rowid<-1
+for(i in 1:nrow(cbpp)){
+	#make a row for each one of the incidences 
+	ntimes<-cbpp[i,2]
+	if(ntimes>0){	
+		for(j in 1:ntimes){
+			herddat[rowid,]<-c(1,cbpp[i,4],cbpp[i,1])
+			rowid<-rowid+1
+		}
+	}
+	
+	#make a row for each of the nonincidences
+	ntimes<-cbpp[i,5]
+	if(ntimes>0){	
+		for(j in 1:ntimes){
+			herddat[rowid,]<-c(0,cbpp[i,4],cbpp[i,1])
+			rowid<-rowid+1
+		}
+	}
+}
+herddat<-as.data.frame(herddat)
+herddat$herd<-as.factor(herddat$herd)
+herddat$period<-as.factor(herddat$period)
+\end{verbatim}
+\end{document}

@@ -1,0 +1,109 @@
+#ntrials is a vector with length equal to length(y). if Bern or Poisson, ntrials is a vec of 1s
+library(parallel)
+library(doParallel)
+library(itertools)
+
+objfun <-
+function(par, nbeta, nu.pql, umat, u.star, mod.mcml, family.glmm, cache, p1, p2, p3, m1, D.star, Sigmuh, Sigmuh.inv, zeta, ntrials, no_cores){
+
+	beta<-par[1:nbeta]
+	nu<-par[-(1:nbeta)]
+	m<-nrow(umat)
+
+	if (!missing(cache)) stopifnot(is.environment(cache))
+
+	if(any(nu<=0)){
+		out<-list(value=-Inf,gradient=rep(1,length(par)),hessian=as.matrix(c(rep(1,length(par)^2)),nrow=length(par)))
+	return(out)
+	}
+	
+	Z=do.call(cbind,mod.mcml$z)
+	T<-length(mod.mcml$z)
+	nrand<-lapply(mod.mcml$z,ncol)
+	nrandom<-unlist(nrand)
+
+
+
+	family.glmm<-getFamily(family.glmm)
+	if(family.glmm$family.glmm=="bernoulli.glmm"){family_glmm=1}	
+	if(family.glmm$family.glmm=="poisson.glmm"){family_glmm=2}	
+	if(family.glmm$family.glmm=="binomial.glmm"){family_glmm=3}	
+
+	Dstarinvdiag<-1/diag(D.star)
+	D.star.inv<-diag(Dstarinvdiag)
+
+	logdet.D.star.inv<-	-sum(log(diag(D.star)))
+	logdet.Sigmuh.inv<-sum(log(eigen(Sigmuh.inv,symmetric=TRUE)$values))
+ 	myq<-nrow(D.star.inv)
+
+	tconst<-tconstant(zeta,myq,Dstarinvdiag)
+	
+	#for the particular value of nu we're interested in, need to prep for distRandGenC
+	eek<-getEk(mod.mcml$z)
+	preDinvfornu<-Map("*",eek,(1/nu))
+	Dinvfornu<-addVecs(preDinvfornu)
+	logdetDinvfornu<-sum(log(Dinvfornu))
+	Dinvfornu <- diag(Dinvfornu)
+	
+	meow<-rep(1,T+1)
+	meow[1]<-0
+	throwaway<-T+1
+	meow[2:throwaway]<-cumsum(nrandom)
+	
+	pea<-c(p1,p2,p3)
+	n <- nrow(mod.mcml$x)
+
+##need to scale first m1 vectors of generated random effects by multiplying by A
+
+#	preAfornu<-Map("*",eek,sqrt(nu))
+#	Afornu<-addVecs(preAfornu)
+
+#	for(k in 1:m1){
+#		u.swoop<-umat[k,]
+#		umat[k,]<-u.swoop*Afornu
+#		}
+	
+	library(parallel)
+	library(doParallel)
+	library(foreach)
+	library(itertools)
+	
+	newsig <- as.double(Sigmuh.inv)
+	grad <- double(length(par))
+	hess <- double((length(par))^2)
+	lnps <- length(pea)
+	val <- double(1)
+	vv <- double(m)
+	
+	#no_cores <- 1
+	
+	cl <- makeCluster(no_cores)
+	registerDoParallel(cl)
+	clusterEvalQ(cl, library(itertools))
+	clusterExport(cl, c("umat", "myq", "m", "mod.mcml", "n", "nbeta", "beta", "Z", "Dinvfornu", "logdetDinvfornu", "family_glmm", "D.star.inv", "logdet.D.star.inv", "u.star", "newsig", "lnps", "logdet.Sigmuh.inv", "pea", "T", "nrandom", "meow", "nu", "zeta", "tconst", "ntrials", "grad", "hess", "val", "vv"), envir = environment())
+	stuff <- foreach(umat=isplitRows(umat, chunks = no_cores)) %dopar% {.C("objfunc", as.double(mod.mcml$y),as.double(t(umat)), as.integer(myq), as.integer(m), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(newsig), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(lnps), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=as.double(vv), ntrials=as.integer(ntrials), value=as.double(val),gradient=as.double(grad),hessian=as.double(hess))}
+	#stuff$gradient <- cbind(stuff$gradient)
+	#stuff$hessian <- cbind(stuff$hessian)
+	stopCluster(cl)
+	
+	#cl <- makeCluster(no_cores)
+	#registerDoParallel(cl)
+	#clusterEvalQ(cl, library(itertools))
+	#clusterExport(cl, c("umat", "myq", "m", "mod.mcml", "n", "nbeta", "beta", "Z", "Dinvfornu", "logdetDinvfornu", "family_glmm", "D.star.inv", "logdet.D.star.inv", "u.star", "newsig", "lnps", "logdet.Sigmuh.inv", "pea", "T", "nrandom", "meow", "nu", "zeta", "tconst", "ntrials", "grad", "hess", "val", "vv"), envir = environment())
+	#stuff <- foreach(i=1:length(umat[,1])) %dopar% {.C("objfunc", as.double(mod.mcml$y),as.double(t(umat[i,])), as.integer(myq), as.integer(m), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(newsig), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(lnps), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=as.double(vv), ntrials=as.integer(ntrials), value=as.double(val),gradient=as.double(grad),hessian=as.double(hess))}
+  #stopCluster(cl)
+	
+	#stuff<-.C("objfunc", as.double(mod.mcml$y),as.double(t(umat)), as.integer(myq), as.integer(m), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(Sigmuh.inv), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(length(pea)), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=double(m), ntrials=as.integer(ntrials), value=double(1),gradient=double(length(par)),hessian=double((length(par))^2))
+
+  #R CMD BUILD name
+	#R CMD check tar --as-cran
+	#--> description change version 1.2.4, change date, add contributer
+	
+	
+	if (!missing(cache)) cache$weights<-stuff$v		
+	
+	list(stuff)
+
+	list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
+
+}

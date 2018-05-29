@@ -1,0 +1,90 @@
+\documentclass{article}
+
+ \usepackage{url} 
+\usepackage{amsthm,amsmath,amssymb,indentfirst,float}
+\usepackage{verbatim}
+\usepackage[sort,longnamesfirst]{natbib}
+\newcommand{\pcite}[1]{\citeauthor{#1}'s \citeyearpar{#1}}
+\newcommand{\ncite}[1]{\citeauthor{#1}, \citeyear{#1}}
+\DeclareMathOperator{\logit}{logit}
+    \DeclareMathOperator{\var}{Var}
+   %  \DeclareMathOperator{\det}{det}
+     \DeclareMathOperator{\diag}{diag}
+
+\usepackage{geometry}
+%\geometry{hmargin=1.025in,vmargin={1.25in,2.5in},nohead,footskip=0.5in} 
+%\geometry{hmargin=1.025in,vmargin={1.25in,0.75in},nohead,footskip=0.5in} 
+%\geometry{hmargin=2.5cm,vmargin={2.5cm,2.5cm},nohead,footskip=0.5in}
+
+\renewcommand{\baselinestretch}{1.25}
+
+\usepackage{amsbsy,amsmath,amsthm,amssymb,graphicx}
+
+\setlength{\baselineskip}{0.3in} \setlength{\parskip}{.05in}
+
+
+\newcommand{\cvgindist}{\overset{\text{d}}{\longrightarrow}}
+\DeclareMathOperator{\PR}{Pr} 
+\DeclareMathOperator{\cov}{Cov}
+
+
+\newcommand{\sX}{{\mathsf X}}
+\newcommand{\tQ}{\tilde Q}
+\newcommand{\cU}{{\cal U}}
+\newcommand{\cX}{{\cal X}}
+\newcommand{\tbeta}{\tilde{\beta}}
+\newcommand{\tlambda}{\tilde{\lambda}}
+\newcommand{\txi}{\tilde{\xi}}
+
+
+
+
+\title{Design Document for Parallelization R Package glmm}
+
+\author{Sydney Benson}
+
+\begin{document}
+\maketitle{}
+
+\begin{abstract}
+This design document will give an overview of the changes made to the R package \texttt{glmm} with respect to parallel computing. We use parallel computing in this package to increase the speed of the calculation of the gradient and hessian for use with MCLA. 
+\end{abstract}
+
+\section{The Packages}
+\subsection{\texttt{parallel}}
+The first package we use for this parallelization is the R package \texttt{parallel}. This package allows for the detection of the number of cores in a computing device and the creation of clusters which allows us to access all of the available cores in the device.
+
+\subsection{\texttt{doParallel}}
+\texttt{doParallel} is utilized in the parallelization process to allow the use of the \texttt{foreach} function within the parallel package. This package allows the function to use the cluster created by \texttt{parallel}. 
+
+\subsection{\texttt{itertools}}
+\texttt{itertools} is used in the parallelization process to divide the \u matrix into even parts, with the number of parts depending on the number of cores in the cluster. 
+
+\section{The Process}
+\subsection{Preparing the Cluster}
+\subsubsection{\texttt{detectCores}}
+We begin by using the \texttt{detectCores} command in order to find the number of cores available in the computing device being used. The actual number of cores we will use for calculations is the number of cores in the device minus one. This enables the user to continue using the device while the function is being computed. 
+
+\subsubsection{\texttt{makeCluster}}
+After detecting how many cores we have available for our cluster, we can create a cluster of our cores using \texttt{makeCluster} where the only argument is the number of cores available for use. 
+
+\subsubsection{\texttt{registerDoParallel}}
+Now that we have our cluster made, we can register the cluster for use with the \texttt{foreach} function.
+
+\subsubsection{\texttt{clusterEvalQ}}
+The \texttt{clusterEvalQ} function allows us to download any necessary packages to work within our cluster. The package that will need to be downloaded within our cluster is \texttt{itertools}.
+
+\subsubsection{\texttt{clusterExport}}
+The final function we need to use to set up our cluster is the \texttt{clusterExport} function. This function allows us to bring any variable from the global environment into the cluster environment for use there. We will need to use this to bring all necessary variables for the \texttt{.C} function into the cluster environment.
+
+\subsection{Separating the Matrix}
+Next, we separate our calculations between our available cores. This separation will be done using the \texttt{isplitRows} function. Using this function, we will split our \u matrix row-wise into parts, the number of parts being determined by the number of cores in our cluster.
+
+\subsection{Calculating the Hessian and Gradient}
+To calculate the hessian and gradient, we have to send each of our chunks of the \u matrix through the \texttt{.C} function. We can do this using the \texttt{foreach} function and the \texttt{\%dopar\%} operator. We then have the hessian and gradient values from each chunk of the \u matrix returned to us in a list. We can add the elements of this list to find our hessian and gradient.
+
+\subsection{Closing the Cluster}
+The final step we take is to close the cluster. We can use \texttt{stopCluster} to accomplish this. The code then returns to completing computations using a single core. 
+
+
+\end{document}
