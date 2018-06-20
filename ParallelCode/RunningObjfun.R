@@ -128,12 +128,16 @@ objfun2 <-
     #stuff$hessian <- cbind(stuff$hessian)
     stopCluster(cl)
     
-    #stuff <- list()
-    #stuff$value <- 0
+    out <- list(split)
     
-    #for(i in 1:no_cores){
-      #stuff$value <- stuff$value + split[[1]][[i]]$value
-    #}
+    expadd <- 0
+    
+    for(i in 1:no_cores){
+      expadd <- expadd + out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value)
+    }
+    
+    stuff <- list()
+    stuff$value <- log(expadd/6)
     
     #cl <- makeCluster(no_cores)
     #clusterExport(cl, c("umat", "myq", "m", "mod.mcml", "n", "nbeta", "beta", "Z", "Dinvfornu", "logdetDinvfornu", "family_glmm", "D.star.inv", "logdet.D.star.inv", "u.star", "newsig", "lnps", "logdet.Sigmuh.inv", "pea", "T", "nrandom", "meow", "nu", "zeta", "tconst", "ntrials", "grad", "hess", "val", "vv"), envir = environment())
@@ -148,7 +152,8 @@ objfun2 <-
     
     if (!missing(cache)) cache$weights<-stuff$v		
     
-    list(split)
+    list(stuff)
+    #return(out)
     
     #list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
     
@@ -161,3 +166,11 @@ newobj[[1]][[2]]$value
 newobj[[1]][[3]]$value
 
 mean(c(newobj[[1]][[1]]$value, newobj[[1]][[2]]$value, newobj[[1]][[3]]$value))
+
+newobj[[1]][[1]]$gradient[1]
+newobj[[1]][[2]]$gradient
+newobj[[1]][[3]]$gradient
+
+mean(c(newobj[[1]][[1]]$gradient[1], newobj[[1]][[2]]$gradient[1], newobj[[1]][[3]]$gradient[1]))
+
+newobj[[1]][[1]]$gradient[1]+ newobj[[1]][[2]]$gradient[1]+ newobj[[1]][[3]]$gradient[1]
