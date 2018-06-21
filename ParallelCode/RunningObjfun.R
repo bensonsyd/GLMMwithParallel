@@ -114,34 +114,54 @@ objfun2 <-
     
     #no_cores <- 2
     
-    fun <- function(umat){
-      .C("objfunc", as.double(mod.mcml$y),as.double(t(umat)), as.integer(myq), as.integer(m), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(newsig), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(lnps), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=double(nrow(umat)), ntrials=as.integer(ntrials), value=as.double(val),gradient=as.double(grad),hessian=as.double(hess))
-    }
-    
     cl <- makeCluster(no_cores)
     registerDoParallel(cl)
     clusterEvalQ(cl, library(itertools))
     clusterExport(cl, c("umat", "myq", "m", "mod.mcml", "n", "nbeta", "beta", "Z", "Dinvfornu", "logdetDinvfornu", "family_glmm", "D.star.inv", "logdet.D.star.inv", "u.star", "newsig", "lnps", "logdet.Sigmuh.inv", "pea", "T", "nrandom", "meow", "nu", "zeta", "tconst", "ntrials", "grad", "hess", "val", "vv", "fun"), envir = environment())
     split <- foreach(miniu=isplitRows(umat, chunks = no_cores)) %dopar% {.C("objfunc", as.double(mod.mcml$y),as.double(t(miniu)), as.integer(myq), as.integer(nrow(miniu)), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(newsig), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(lnps), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=as.double(vv), ntrials=as.integer(ntrials), value=as.double(val),gradient=as.double(grad),hessian=as.double(hess))}
-    #stuff <- foreach(umat=isplitRows(umat, chunks = no_cores)) %dopar% {fun(umat)}
-    #stuff$gradient <- cbind(stuff$gradient)
-    #stuff$hessian <- cbind(stuff$hessian)
     stopCluster(cl)
     
     out <- list(split)
     
-    expadd <- 0
-    
+    ## value
+    vals <- c()
     for(i in 1:no_cores){
-      expadd <- expadd + out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value)
+      vals[i] <- out[[1]][[i]]$value
+    }
+    a <- max(vals)
+    
+    expadda <- 0
+    for(i in 1:no_cores){
+      expadda <- expadda + out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
     }
     
     stuff <- list()
-    stuff$value <- log(expadd/6)
+    stuff$value <- log(expadda/6) + a
     
-    #cl <- makeCluster(no_cores)
-    #clusterExport(cl, c("umat", "myq", "m", "mod.mcml", "n", "nbeta", "beta", "Z", "Dinvfornu", "logdetDinvfornu", "family_glmm", "D.star.inv", "logdet.D.star.inv", "u.star", "newsig", "lnps", "logdet.Sigmuh.inv", "pea", "T", "nrandom", "meow", "nu", "zeta", "tconst", "ntrials", "grad", "hess", "val", "vv"), envir = environment())
-    #stuff <- parRapply(cl, umat, fun(umat))
+    ## gradient
+    expadd <- 0
+    res <- c()
+    for(i in 1:no_cores){
+      res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value)
+      expadd <- expadd + res[i]
+    }
+  
+    for(j in 1: length(out[[1]][[1]]$gradient)){
+      gradadd <- 0
+      for(i in 1:length(res)){
+        gradadd <- gradadd + res[i]*out[[1]][[i]]$gradient[j]
+      }
+      stuff$gradient[j] <- gradadd/expadd
+    }
+    
+    ## hessian
+    for(j in 1:length(out[[1]][[1]]$hessian)){
+      hessadd <- 0
+      for(i in 1:length(res)){
+        hessadd <- hessadd + res[i]*out[[1]][[i]]$hessian[j]
+      }
+      stuff$hessian[j] <- hessadd/expadd
+    }
     
     #stuff<-.C("objfunc", as.double(mod.mcml$y),as.double(t(umat[5:6,])), as.integer(myq), as.integer(nrow(umat[5:6,])), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(Sigmuh.inv), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(length(pea)), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=double(m), ntrials=as.integer(ntrials), value=double(1),gradient=double(length(par)),hessian=double((length(par))^2))
     
