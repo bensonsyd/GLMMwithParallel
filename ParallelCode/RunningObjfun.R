@@ -114,6 +114,10 @@ objfun2 <-
     
     #no_cores <- 2
     
+    fun <- function(umat){
+      .C("objfunc", as.double(mod.mcml$y),as.double(t(umat)), as.integer(myq), as.integer(m), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(newsig), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(lnps), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=double(nrow(umat)), ntrials=as.integer(ntrials), value=as.double(val),gradient=as.double(grad),hessian=as.double(hess))
+    }
+    
     cl <- makeCluster(no_cores)
     registerDoParallel(cl)
     clusterEvalQ(cl, library(itertools))
@@ -136,7 +140,7 @@ objfun2 <-
     }
     
     stuff <- list()
-    stuff$value <- log(expadda/6) + a
+    stuff$value <- log(expadda/m) + a
     
     ## gradient
     expadd <- 0

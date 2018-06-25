@@ -78,10 +78,43 @@ The \texttt{clusterEvalQ} function allows us to download any necessary packages 
 The final function we need to use to set up our cluster is the \texttt{clusterExport} function. This function allows us to bring any variable from the global environment into the cluster environment for use there. We will need to use this to bring all necessary variables for the \texttt{.C} function into the cluster environment.
 
 \subsection{Separating the Matrix}
-Next, we separate our calculations between our available cores. This separation will be done using the \texttt{isplitRows} function. Using this function, we will split our \u matrix row-wise into parts, the number of parts being determined by the number of cores in our cluster.
+Next, we separate our calculations between our available cores. This separation will be done using the \texttt{isplitRows} function. Using this function, we will split our $u$ matrix row-wise into parts, the number of parts being determined by the number of cores in our cluster.
 
-\subsection{Calculating the Hessian and Gradient}
-To calculate the hessian and gradient, we have to send each of our chunks of the \u matrix through the \texttt{.C} function. We can do this using the \texttt{foreach} function and the \texttt{\%dopar\%} operator. We then have the hessian and gradient values from each chunk of the \u matrix returned to us in a list. We can add the elements of this list to find our hessian and gradient.
+\subsection{Calculating the Value, Hessian and Gradient}
+To calculate the hessian and gradient, we have to send each of our chunks of the $u$ matrix through the \texttt{.C} function. We can do this using the \texttt{foreach} function and the \texttt{\%dopar\%} operator. We then have the hessian and gradient values from each chunk of the $u$ matrix returned to us in a list.
+
+\subsubsection{The Value}
+We begin by thinking about combining the values given by each core in the simple case, not accounting for any overflow issues or uneven division of the matrix among the cores. We can find the value for the entire $u$ matrix using
+
+\begin{align}
+l_m(\theta|y) = \log(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i})
+\end{align}
+
+\noindent where $r$ is the number of cores being used and $v$ is the value obtained from each core. However, we might face the issue of an uneven distribution of the $u$ matrix among the cores because the number of rows in the $u$ matrix is not divisible by the number of cores being utilized. In this case, we need to alter equation 1 to be
+
+\begin{align}
+l_m(\theta|y) = \log(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \cdot e^{v_i})
+\end{align}
+
+\noindent where$m$ is the number of rows of the $u$ matrix, $j_i$ is the number of rows of the chunk of the $u$ matrix being processed by the $i$th core. Finally, we might run into an overflow problem. This occurs when a number becomes so great that it is stored as infinity by \texttt{R}. Thus, the equation changes to 
+
+\begin{align}
+l_m(\theta|y) = a + \log(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \cdot e^{v_i - a})
+\end{align}
+
+\noindent where $a = \max{v_i}$.
+
+\subsubsection{The Gradient}
+To find the gradient, we'll also need to think about overflow and an uneven distribution of the $u$ matrix among the cores. However, like when calculating the value, we need to think about the simple case first. We can combine each the hessian from each core using
+
+\begin{align}
+\nabla l_m(\theta|y) =\dfrac{\sum\limits_{k=1}^s \sum\limits_{i=1}^r j_i \cdot e^{v_i} \cdot g_{i,k}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i}}
+\end{align}
+
+\noindent where $s$ is the length of the gradient vector and $g_{i,k}$ is the the $k$th element of the gradient vector produced by the $i$th core. This equation also accounts for an uneven distribution of the $u$ matrix among the cores.
+
+\subsubsection{The Hessian}
+
 
 \subsection{Closing the Cluster}
 The final step we take is to close the cluster. We can use \texttt{stopCluster} to accomplish this. The code then returns to completing computations using a single core. 
