@@ -111,10 +111,18 @@ To find the gradient, we'll also need to think about overflow and an uneven dist
 \nabla l_m(\theta|y) =\dfrac{\sum\limits_{k=1}^s \sum\limits_{i=1}^r j_i \cdot e^{v_i} \cdot g_{i,k}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i}}
 \end{align}
 
-\noindent where $s$ is the length of the gradient vector and $g_{i,k}$ is the the $k$th element of the gradient vector produced by the $i$th core. This equation also accounts for an uneven distribution of the $u$ matrix among the cores.
+\noindent where $s$ is the length of the gradient vector and $g_{i,k}$ is the $k$th element of the gradient vector produced by the $i$th core. This equation also accounts for an uneven distribution of the $u$ matrix among the cores.
 
 \subsubsection{The Hessian}
+Finally we have to think about overflow and an uneven distribution of the $u$ matrix among the cores for the hessian as well. Thinking about the simple case, we can combine each element of the hessian from each core using
 
+\begin{align}
+\nabla^2 l_m(\theta|y) = \dfrac{\sum\limits_{d=1}^q \sum\limits_{i=1}^r j_i \cdot e^{v_i} \cdot h_{i,d}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i}}
+\end{align}
+
+\noindent where $q$ is the length of the hessian vector produced by each core and $h_{i, d}$ is the $d$th element of the hessian vector produced by the $i$th core. This equation accounts for an uneven distribution of the $u$ matrix among the cores as well. 
+
+Since the hessian is given as a vector from each core, we'll also need to for the hessian vector into the hessian matrix. 
 
 \subsection{Closing the Cluster}
 The final step we take is to close the cluster. We can use \texttt{stopCluster} to accomplish this. The code then returns to completing computations using a single core. 
