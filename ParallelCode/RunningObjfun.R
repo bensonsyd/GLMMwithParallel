@@ -136,6 +136,7 @@ objfun2 <-
     
     expadda <- 0
     for(i in 1:no_cores){
+      res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
       expadda <- expadda + out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
     }
     
@@ -143,19 +144,19 @@ objfun2 <-
     stuff$value <- log(expadda/m) + a
     
     ## gradient
-    expadd <- 0
-    res <- c()
-    for(i in 1:no_cores){
-      res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value)
-      expadd <- expadd + res[i]
-    }
+    #expadd <- 0
+    #res <- c()
+    #for(i in 1:no_cores){
+      #res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value)
+      #expadd <- expadd + res[i]
+    #}
   
     for(j in 1: length(out[[1]][[1]]$gradient)){
       gradadd <- 0
       for(i in 1:length(res)){
         gradadd <- gradadd + res[i]*out[[1]][[i]]$gradient[j]
       }
-      stuff$gradient[j] <- gradadd/expadd
+      stuff$gradient[j] <- gradadd/expadda
     }
     
     ## hessian
@@ -164,7 +165,7 @@ objfun2 <-
       for(i in 1:length(res)){
         hessadd <- hessadd + res[i]*out[[1]][[i]]$hessian[j]
       }
-      stuff$hessian[j] <- hessadd/expadd
+      stuff$hessian[j] <- hessadd/expadda
     }
     
     #stuff<-.C("objfunc", as.double(mod.mcml$y),as.double(t(umat[5:6,])), as.integer(myq), as.integer(nrow(umat[5:6,])), as.double(mod.mcml$x), as.integer(n), as.integer(nbeta), as.double(beta), as.double(Z), as.double(Dinvfornu), as.double(logdetDinvfornu),as.integer(family_glmm), as.double(D.star.inv), as.double(logdet.D.star.inv), as.double(u.star), as.double(Sigmuh.inv), as.double(logdet.Sigmuh.inv), pea=as.double(pea), nps=as.integer(length(pea)), T=as.integer(T), nrandom=as.integer(nrandom), meow=as.integer(meow),nu=as.double(nu), zeta=as.integer(zeta),tconst=as.double(tconst), v=double(m), ntrials=as.integer(ntrials), value=double(1),gradient=double(length(par)),hessian=double((length(par))^2))
@@ -177,7 +178,7 @@ objfun2 <-
     if (!missing(cache)) cache$weights<-stuff$v		
     
     list(stuff)
-    #return(out)
+    #return()
     
     #list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
     
@@ -198,3 +199,46 @@ newobj[[1]][[3]]$gradient
 mean(c(newobj[[1]][[1]]$gradient[1], newobj[[1]][[2]]$gradient[1], newobj[[1]][[3]]$gradient[1]))
 
 newobj[[1]][[1]]$gradient[1]+ newobj[[1]][[2]]$gradient[1]+ newobj[[1]][[3]]$gradient[1]
+
+
+
+res <- c()
+for(i in 1:no_cores){
+  res[i] <- newobj[[1]][[1]][[i]][[4]]*exp(newobj[[1]][[1]][[i]]$value)
+  expadd <- expadd + res[i]
+}
+
+hessmat <- matrix(rep(0, 12), nrow = 4, ncol = 3)
+hess <- c(rep(0, 4))
+for(j in 1:length(newobj[[1]][[1]][[1]]$hessian)){
+  hessadd <- 0
+  for(i in 1:length(res)){
+    hessmat[j,i] <- res[i]*newobj[[1]][[1]][[i]]$hessian[j]
+    hessadd <- hessadd + res[i]*newobj[[1]][[1]][[i]]$hessian[j]
+  }
+  hess[j] <- hessadd/expadd
+}
+
+grad <- matrix(rep(0, 6), nrow = 2, ncol = 3)
+for(i in 1:length(res)){
+  gradients[[i]] <- (res[i]/expadd)*gradients[[i]]
+}
+sum(grad[1,])
+
+val <- 0
+for(i in 1:no_cores){
+  val <- val + sum(newobj[[1]][[i]]$v)
+}
+log(val/m)
+
+vals <- c()
+for(i in 1:no_cores){
+  vals[i] <- newobj[[1]][[i]]$value
+}
+a <- max(vals)
+
+expadda <- 0
+for(i in 1:no_cores){
+  res[i] <- newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value - a)
+  expadda <- expadda + newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value - a)
+}
