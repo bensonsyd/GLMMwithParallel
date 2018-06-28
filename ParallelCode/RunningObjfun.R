@@ -137,8 +137,9 @@ objfun2 <-
     expadda <- 0
     for(i in 1:no_cores){
       res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
-      expadda <- expadda + out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
     }
+    
+    expadda <- sum(res)
     
     stuff <- list()
     stuff$value <- log(expadda/m) + a
@@ -178,7 +179,7 @@ objfun2 <-
     if (!missing(cache)) cache$weights<-stuff$v		
     
     list(stuff)
-    #return()
+    #return(out)
     
     #list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
     
@@ -210,11 +211,11 @@ for(i in 1:no_cores){
 
 hessmat <- matrix(rep(0, 12), nrow = 4, ncol = 3)
 hess <- c(rep(0, 4))
-for(j in 1:length(newobj[[1]][[1]][[1]]$hessian)){
+for(j in 1:length(newobj[[1]][[1]]$hessian)){
   hessadd <- 0
   for(i in 1:length(res)){
-    hessmat[j,i] <- res[i]*newobj[[1]][[1]][[i]]$hessian[j]
-    hessadd <- hessadd + res[i]*newobj[[1]][[1]][[i]]$hessian[j]
+    hessmat[j,i] <- res[i]*newobj[[1]][[i]]$hessian[j]
+    hessadd <- hessadd + res[i]*newobj[[1]][[i]]$hessian[j]
   }
   hess[j] <- hessadd/expadd
 }
