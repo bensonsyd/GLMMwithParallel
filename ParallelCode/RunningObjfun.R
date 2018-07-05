@@ -134,6 +134,7 @@ objfun2 <-
     }
     a <- max(vals)
     
+    res <- c(rep(0, no_cores))
     expadda <- 0
     for(i in 1:no_cores){
       res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
@@ -178,8 +179,8 @@ objfun2 <-
     
     if (!missing(cache)) cache$weights<-stuff$v		
     
-    list(stuff)
-    #return(out)
+    #list(stuff)
+    return(out)
     
     #list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
     
@@ -205,7 +206,7 @@ newobj[[1]][[1]]$gradient[1]+ newobj[[1]][[2]]$gradient[1]+ newobj[[1]][[3]]$gra
 
 res <- c()
 for(i in 1:no_cores){
-  res[i] <- newobj[[1]][[1]][[i]][[4]]*exp(newobj[[1]][[1]][[i]]$value)
+  res[i] <- newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value)
   expadd <- expadd + res[i]
 }
 
@@ -217,7 +218,7 @@ for(j in 1:length(newobj[[1]][[1]]$hessian)){
     hessmat[j,i] <- res[i]*newobj[[1]][[i]]$hessian[j]
     hessadd <- hessadd + res[i]*newobj[[1]][[i]]$hessian[j]
   }
-  hess[j] <- hessadd/expadd
+  hess[j] <- hessadd/expadda
 }
 
 grad <- matrix(rep(0, 6), nrow = 2, ncol = 3)
@@ -238,6 +239,7 @@ for(i in 1:no_cores){
 }
 a <- max(vals)
 
+res <- c(rep(0, no_cores))
 expadda <- 0
 for(i in 1:no_cores){
   res[i] <- newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value - a)
