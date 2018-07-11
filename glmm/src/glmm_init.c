@@ -83,6 +83,8 @@ static R_CMethodDef cMethods[] = {
     {"elc", (DL_FUNC) &elc, 10, elc_types},
     {"mcsec", (DL_FUNC) &mcsec, 30, mcsec_types},
     {"objfunc", (DL_FUNC) &objfunc, 30, objfunc_types},
+    {"valgrad", (DL_FUNC) &valgrad, 30, objfunc_types},
+    {"hess", (DL_FUNC) &hess, 30, objfunc_types},
     {"cp3", (DL_FUNC) &cp3, 5, cp3_types},
     {"cpp3", (DL_FUNC) &cpp3, 5, cp3_types},
     {"cum3", (DL_FUNC) &cum3, 5, cp3_types},
