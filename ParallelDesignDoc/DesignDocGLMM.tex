@@ -64,6 +64,8 @@ The first package we use for this parallelization is the R package \texttt{paral
 \texttt{itertools} is used in the parallelization process to divide the \u matrix into even parts, with the number of parts depending on the number of cores in the cluster. 
 
 \section{The Process}
+The parallelization of the function will be completed in two steps. First, the value of the log-likelihood approximation and the gradient will be calculated in one parallelized function. Then, this information will be used to calculate the hessian in a second, separate, parallelized function. Therefore, the cluster will need to be prepared and closed, and the matrix will need to be divided two separate times. 
+
 \subsection{Preparing the Cluster}
 \subsubsection{\texttt{detectCores}}
 We begin by using the \texttt{detectCores} command in order to find the number of cores available in the computing device being used. The actual number of cores we will use for calculations is the number of cores in the device minus one. This enables the user to continue using the device while the function is being computed. 
@@ -84,7 +86,7 @@ The final function we need to use to set up our cluster is the \texttt{clusterEx
 Next, we separate our calculations between our available cores. This separation will be done using the \texttt{isplitRows} function. Using this function, we will split our $u$ matrix row-wise into parts, the number of parts being determined by the number of cores in our cluster.
 
 \subsection{Calculating the Value, Hessian and Gradient}
-To calculate the hessian and gradient, we have to send each of our chunks of the $u$ matrix through the \texttt{.C} function. We can do this using the \texttt{foreach} function and the \texttt{\%dopar\%} operator. We then have the hessian and gradient values from each chunk of the $u$ matrix returned to us in a list.
+To calculate the value and gradient, we have to send each of our chunks of the $u$ matrix through the \texttt{.C} function, which allows us to run the objective function \texttt{C} function. We can do this using the \texttt{foreach} function and the \texttt{\%dopar\%} operator. We then have the value and gradient values from each chunk of the $u$ matrix returned to us as part of a list.
 
 \subsubsection{The Value}
 We begin by thinking about combining the values given by each core in the simple case, not accounting for any overflow issues or uneven division of the matrix among the cores. We can find the value for the entire $u$ matrix using
@@ -145,25 +147,29 @@ Recombining the gradient from each core requires slightly more work than the rec
 \noindent and $a$ is defined as above. 
 
 \subsubsection{The Hessian}
-Finally we have to think about overflow and an uneven distribution of the $u$ matrix among the cores for the hessian as well. Thinking about the simple case, we can combine each element of the hessian from each core using
+Finally, we approach the calculations for the hessian. First, we know that the equation to calculate the hessian is 
+
+\begin{multline}
+\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  \dfrac{ f_\theta(u_k,y)}{\tilde{f}(u_k)}  }{\sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}}\\
++ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{\sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}}_.
+\end{multline}
+
+\noindent Then, using information from the value of the log-likelihood approximation, we know
 
 \begin{align}
-\nabla^2 l_m(\theta|y) = \dfrac{\sum\limits_{d=1}^q \sum\limits_{i=1}^r e^{v_i} \cdot h_{i,d}}{\sum\limits_{i=1}^r e^{v_i}}
+m e^{l_m(\theta|y)} = \sum\limits_{k=1}^m \dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)}
 \end{align}
 
-\noindent where $q$ is the length of the hessian vector produced by each core and $h_{i, d}$ is the $d$th element of the hessian vector produced by the $i$th core. To correct for an uneven distribution of the $u$ matrix, the $j_i$ variable must be added, similar to above, so the hessian equation becomes
+\noindent and, since we already have $l_m(\theta|y)$ calculated, we can set $m e^{l_m(\theta|y)}$ as the denominator for equation 12 for each core. Thus, we have
 
-\begin{align}
-\nabla^2 l_m(\theta|y) = \dfrac{\sum\limits_{d=1}^q \sum\limits_{i=1}^r j_i \cdot e^{v_i} \cdot h_{i,d}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i}}
-\end{align}
+\begin{multline}
+\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  \dfrac{ f_\theta(u_k,y)}{\tilde{f}(u_k)}  }{m e^{l_m(\theta|y)}}\\
++ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{m e^{l_m(\theta|y)}}
+\end{multline}
 
-\noindent Finally, we can make the equation more computationally stable by adding our $a$ variable, as above.
+\noindent Notice that we can assure that the second part of equation 14 will is accurate by providing $\nabla l_m (\theta|y)$, the gradient, to the function which calculates the hessian. 
 
-\begin{align}
-\nabla^2 l_m(\theta|y) = \dfrac{\sum\limits_{d=1}^q \sum\limits_{i=1}^r j_i \cdot e^{v_i - a} \cdot h_{i,d}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i - a}}
-\end{align}
-
-Since the hessian is given as a vector from each core, we'll also need to for the hessian vector into the hessian matrix. 
+Then, to calculate the final hessian for the complete $u$ matrix we must sum the hessians produced by each core. 
 
 \subsection{Closing the Cluster}
 The final step we take is to close the cluster. We can use \texttt{stopCluster} to accomplish this. The code then returns to completing computations using a single core. 
