@@ -97,18 +97,12 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     }
     Free(b);
     
-    double bottom = 0.0;
-    for(int i = 0; i<*m; i++){
-        bottom+= tops[i];
-    }
     /* Calculate tops/bottom */
     for(int i = 0; i<*m; i++){
-        v[i] = tops[i]/bottom;
+        v[i] = tops[i]/(*value);
     }
     Free(tops);
     
-    /* Calculate value */
-    *value = a-log(*m)+log(bottom);
     
     
     /* done with value! */
@@ -131,39 +125,7 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     double *lobster = Calloc(npar*npar, double);
     int lfyuindex = 0, lfuindex = 0, matindex = 0;
     
-    for(int k = 0; k<*m; k++){
-        /*start by getting Uk  */
-        for(int i = 0; i<*myq; i++){
-            Uk[i] = Umat[Uindex];
-            Uindex++;
-        }
-        
-        /* calculate eta for this value of Uk
-         first calculate ZUk*/
-        matvecmult(z, Uk, n, myq, zu);
-        
-        /* then add xbeta+zu to get current value of eta */
-        addvec(xbeta, zu, n, eta);
-        
-        /* calculate lfu gradient and hessian */
-        distRand3C(nu, qzeros, T, nrandom, meow, Uk, lfugradient, lfuhess);
-        
-        /* calculate gradient and hessian log f_theta(y|u_k) */
-        elGH(y, x, n, nbeta, eta, family_glmm, ntrials, lfyugradient, lfyuhess);
-        
-        /* calculate gradient */
-        Gindex=0;
-        
-        for(int i = 0; i<*nbeta; i++){
-            gradient[Gindex]+= lfyugradient[i]*v[k];
-            Gindex++;
-        }
-        for(int i = 0; i<*T; i++){
-            gradient[Gindex]+= lfugradient[i]*v[k];
-            Gindex++;
-        }
-        
-    } /* ends FIRST k loop */
+    
     
     /*    reset counters to 0*/
     Uindex = 0;

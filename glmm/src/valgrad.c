@@ -119,17 +119,10 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
     double *lfyugradient = Calloc(*nbeta, double);
     double *lfyuhess = Calloc((*nbeta)*(*nbeta), double);
     
-    double *pandabit1 = Calloc(npar, double);
-    double *pandabit2 = Calloc(npar, double);
-    double *panda = Calloc(npar*npar, double);
-    double *pandatemp = Calloc(npar*npar, double);
     
     Uindex = 0;
     int Gindex = 0;
-    int intone = 1;
-    
-    double *lobster = Calloc(npar*npar, double);
-    int lfyuindex = 0, lfuindex = 0, matindex = 0;
+
     
     for(int k = 0; k<*m; k++){
         /*start by getting Uk  */
@@ -164,4 +157,20 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
         }
         
     } /* ends FIRST k loop */
+    
+    
+    
+    Free(Uk);
+    Free(xbeta);
+    Free(zu);
+    Free(eta);
+    Free(lfugradient);
+    Free(lfuhess);
+    Free(lfyugradient);
+    Free(lfyuhess);
+    
+    Free(qzeros);
+    
 }
+
+
