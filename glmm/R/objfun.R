@@ -84,12 +84,15 @@ function(par, nbeta, nu.pql, umat, u.star, mod.mcml, family.glmm, cache, p1, p2,
 	a <- max(vals)
 	
 	res <- c(rep(0, no_cores))
+	res2 <- c(rep(0, no_cores))
 	expadda <- 0
 	for(i in 1:no_cores){
 	  res[i] <- out[[1]][[i]][[4]]*exp(out[[1]][[i]]$value - a)
+	  res2[i] <- exp(out[[1]][[i]]$value - a)
 	}
 	
 	expadda <- sum(res)
+	expadda2 <- sum(res2)
 	
 	stuff <- list()
 	stuff$value <- log(expadda/m) + a
@@ -133,7 +136,7 @@ function(par, nbeta, nu.pql, umat, u.star, mod.mcml, family.glmm, cache, p1, p2,
 	if (!missing(cache)) cache$weights<-stuff$v		
 	
 	#list(stuff)
-	return(c(stuff, out2))
+	return(stuff)
 
 	#list(value=stuff$value,gradient=stuff$gradient,hessian=matrix(stuff$hessian,ncol=length(par),byrow=FALSE))
 
