@@ -8,7 +8,7 @@
  ntrials is a vec of ints with length equal to length(y)
  */
 
-void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *value, double *gradient, double *hessian)
+void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *value, double *gradient, double *hessian, double *bottom)
 {
     double *Uk = Calloc(*myq, double);
     int Uindex = 0;
@@ -90,6 +90,7 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     
     Free(lfutwidpieces);
     
+    
     /* Calculate weights v[k] */
     double *tops = Calloc(*m, double);
     for(int i = 0; i<*m; i++){
@@ -97,13 +98,15 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     }
     Free(b);
     
+    /* double bottom = 0.0; */
+    /* for(int i = 0; i<*m; i++){
+        *bottom+= tops[i];
+    } */
     /* Calculate tops/bottom */
     for(int i = 0; i<*m; i++){
         v[i] = tops[i]/(*value);
     }
     Free(tops);
-    
-    
     
     /* done with value! */
     /* now going to do second loop, which calculates grad and hess */
