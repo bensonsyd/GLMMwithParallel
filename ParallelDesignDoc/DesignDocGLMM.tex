@@ -171,7 +171,7 @@ Finally, we approach the calculations for the hessian. First, we know that the e
 + \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}
 \end{multline}
 
-\noindent Notice that we can assure that the second part of equation 14 is accurate by providing $\nabla l_m (\theta|y)$, the gradient, to the function which calculates the hessian.
+\noindent Notice that we can assure that the second part of equation 15 is accurate by providing $\nabla l_m (\theta|y)$, the gradient, to the function which calculates the hessian.
 
 Last, we know $\dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)} = e^{b_k -a}$ where $b_k = \log f_\theta (u_k) + \log f_\theta (y|u_k) - \log  \tilde{f} (u_k)$ so, 
 
