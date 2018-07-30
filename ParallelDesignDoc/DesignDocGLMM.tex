@@ -92,19 +92,19 @@ To calculate the value and gradient, we have to send each of our chunks of the $
 We begin by thinking about combining the values given by each core in the simple case, not accounting for any overflow issues or uneven division of the matrix among the cores. We can find the value for the entire $u$ matrix using
 
 \begin{align}
-l_m(\theta|y) = \log(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i})
+l_m(\theta|y) = \log\left(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i}\right)
 \end{align}
 
 \noindent where $r$ is the number of cores being used and $v_i$ is the value obtained from each core. However, we might face the issue of an uneven distribution of the $u$ matrix among the cores because the number of rows in the $u$ matrix is not divisible by the number of cores being utilized. In this case, we need to alter equation 1 to be
 
 \begin{align}
-l_m(\theta|y) = \log(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \cdot e^{v_i})
+l_m(\theta|y) = \log\left(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \ e^{v_i}\right)
 \end{align}
 
 \noindent where $m$ is the number of rows of the $u$ matrix, $j_i$ is the number of rows of the chunk of the $u$ matrix being processed by the $i$th core. Finally, we might run into an overflow problem. This occurs when a number becomes so great that it is stored as infinity by \texttt{R}. Thus, the equation changes to 
 
 \begin{align}
-l_m(\theta|y) = a + \log(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \cdot e^{v_i - a})
+l_m(\theta|y) = a + \log\left(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \ e^{v_i - a}\right)
 \end{align}
 
 \noindent where $a = \max{v_i}$.
@@ -117,10 +117,10 @@ Recombining the gradient from each core requires slightly more work than the rec
 \dfrac{\sum_{k=1}^m   \left[  \nabla  \log f_\theta(u_k,y) \right]  \dfrac{f_\theta(u_k,y)}{\tilde{f}(u_k)} }{\sum_{k=1}^m  \dfrac{f_\theta(u_k,y)}{\tilde{f}(u_k)}  } 
 \end{align}
 
-\noindent where $m$ is the number of rows in the $u$ matrix. This means that the gradient received from each core via parallel processing will follow this equation. Thus, we face the issue of having an incorrect denominator if we simply add the gradients from each core. To fix this, we need to first multiply the gradient from each core by the denominator of that gradient. We can obtain $\sum_{k=1}^m  \dfrac{f_\theta(u_k,y)}{\tilde{f}(u_k)}$ since we know that $l_{m}(\theta|y) = \log \left( \dfrac{1}{m} \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)} \right)$ and $l_m(\theta|y) = \log(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i})$. Thus, 
+\noindent where $m$ is the number of rows in the $u$ matrix. This means that the gradient received from each core via parallel processing will follow this equation. Thus, we face the issue of having an incorrect denominator if we simply add the gradients from each core. To fix this, we need to first multiply the gradient from each core by the denominator of that gradient. We can obtain $\sum_{k=1}^m  \dfrac{f_\theta(u_k,y)}{\tilde{f}(u_k)}$ since we know that $l_{m}(\theta|y) = \log \left( \dfrac{1}{m} \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)} \right)$ and $l_m(\theta|y) = \log\left(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i}\right)$. Thus, 
 
 \begin{align}
-\log \left( \dfrac{1}{m} \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)} \right) &= \log(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i}) \\
+\log \left( \dfrac{1}{m} \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)} \right) &= \log\left(\dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i}\right) \\
 \dfrac{1}{m} \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}  &= \dfrac{1}{r}\sum\limits_{i=1}^r e^{v_i} \\
 \sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}  &= \dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i}
 \end{align}
@@ -128,23 +128,27 @@ Recombining the gradient from each core requires slightly more work than the rec
 \noindent therefore, we can combine each the gradient from each core using
 
 \begin{align}
-\nabla l_m(\theta|y) &=\dfrac{\dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i} \cdot g_{i,k}}{\dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i}} \\
-\nabla l_m(\theta|y) &=\dfrac{ \sum\limits_{i=1}^r e^{v_i} \cdot g_{i,k}}{\sum\limits_{i=1}^r e^{v_i}}
+\nabla l_m(\theta|y) &=\dfrac{\dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i} \ g_{i,k}}{\dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i}} \\
+\nabla l_m(\theta|y) &=\dfrac{ \sum\limits_{i=1}^r e^{v_i} \ g_{i,k}}{\sum\limits_{i=1}^r e^{v_i}}
 \end{align}
 
-\noindent where$k = 1, 2, \ldots, s$,  $s$ is the length of the gradient vector and $g_{i,k}$ is the $k$th element of the gradient vector produced by the $i$th core. To alter this equation for handling an uneven distribution of the $u$ matrix we need to make a change similar to the change made to the value calculation in order to handle this same problem. The new equation is
+\noindent where $k = 1, 2, \ldots, s$,  $s$ is the length of the gradient vector and $g_{i,k}$ is the $k$th element of the gradient vector produced by the $i$th core. To alter this equation for handling an uneven distribution of the $u$ matrix we need to make a change similar to the change made to the value calculation in order to handle this same problem. The new equation is
 
 \begin{align}
-\nabla l_m(\theta|y) =\dfrac{ \sum\limits_{i=1}^r j_i \cdot e^{v_i} \cdot g_{i,k}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i}}
+\nabla l_m(\theta|y) =\dfrac{ \sum\limits_{i=1}^r j_i \ e^{v_i} \ g_{i,k}}{\sum\limits_{i=1}^r j_i \ e^{v_i}}
 \end{align}
 
 \noindent where $j_i$ is the number of rows of the chunk of the $u$ matrix being processed by the $i$th core, as mentioned previously. Then, for computational stability, to account for overflow and underflow, we can make a similar alteration to the one made above. Our final equation becomes
 
 \begin{align}
-\nabla l_m(\theta|y) =\dfrac{ \sum\limits_{i=1}^r j_i \cdot e^{v_i - a} \cdot g_{i,k}}{\sum\limits_{i=1}^r j_i \cdot e^{v_i - a}}
+\nabla l_m(\theta|y) =\dfrac{ \sum\limits_{i=1}^r j_i \ e^{v_i - a} \ g_{i,k}}{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}
 \end{align}
 
-\noindent and $a$ is defined as above. 
+\noindent and $a$ is defined as above. From this we know that
+
+\begin{align}
+\dfrac{m}{r} \sum\limits_{i=1}^r e^{v_i} = \sum\limits_{i=1}^r j_i \ e^{v_i - a}
+\end{align}
 
 \subsubsection{The Hessian}
 Finally, we approach the calculations for the hessian. First, we know that the equation to calculate the hessian is 
@@ -154,37 +158,17 @@ Finally, we approach the calculations for the hessian. First, we know that the e
 + \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{\sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}}_.
 \end{multline}
 
-\noindent Then, we can look at the simplest case. In this case, we have no computational instability and an even distribution of portions of the $u$ matrix among the cores. So, using information from the value of the log-likelihood approximation,
+\noindent From equations 7 and 12, we know
 
 \begin{align}
-\sum\limits_{k=1}^m \dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)} &= m e^{l_m(\theta|y)} \\
-&= m e^{\log{(\dfrac{1}{r} \sum_{i=1}^r e^{v_i})}} \\
-&= \dfrac{m}{r} \sum_{i=1}^r e^{v_i}
-\end{align}
-
-\noindent If we have an uneven distribution of portions of the $u$ matrix among the cores then we have
-
-\begin{align}
-\sum\limits_{k=1}^m \dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)} &= m e^{l_m(\theta|y)} \\
-&= m e^{\log{(\dfrac{1}{m}\sum\limits_{i=1}^r j_i \cdot e^{v_i})}} \\
-&= \sum_{i=1}^r j_i e^{v_i}
-\end{align}
-
-\noindent and 
-
-\noindent Finally, if we account for computational instability, we find
-
-\begin{align}
-\sum\limits_{k=1}^m \dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)} &= m e^{a + \log{\dfrac{1}{m} \sum_{i=1}^r j_i e^{v_i -a}}} \\
-&= m e^a \dfrac{1}{m} \sum_{i=1}^r j_i e^{v_i - a} \\
-&= e^a \sum_{i=1}^r j_i e^{v_i - a}
+\sum_{k=1}^m  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)} = \sum\limits_{i=1}^r j_i \ e^{v_i - a}
 \end{align}
 
 \noindent Thus, we have
 
 \begin{multline}
-\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  \dfrac{ f_\theta(u_k,y)}{\tilde{f}(u_k)}  }{e^a \sum_{i=1}^r j_i e^{v_i - a}}\\
-+ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{e^a \sum_{i=1}^r j_i e^{v_i - a}}
+\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  \dfrac{ f_\theta(u_k,y)}{\tilde{f}(u_k)}  }{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}\\
++ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  \dfrac{ f_\theta(u_k,y)   }{\tilde{f}(u_k)}   }{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}
 \end{multline}
 
 \noindent Notice that we can assure that the second part of equation 14 is accurate by providing $\nabla l_m (\theta|y)$, the gradient, to the function which calculates the hessian.
@@ -192,8 +176,8 @@ Finally, we approach the calculations for the hessian. First, we know that the e
 Last, we know $\dfrac{f_\theta(u_k, y)}{\tilde{f}(u_k)} = e^{b_k -a}$ where $b_k = \log f_\theta (u_k) + \log f_\theta (y|u_k) - \log  \tilde{f} (u_k)$ so, 
 
 \begin{multline}
-\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  e^{b_k-a}  }{e^a \sum_{i=1}^r j_i e^{v_i - a}}\\
-+ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  e^{b_k-a}}{e^a \sum_{i=1}^r j_i e^{v_i - a}}
+\nabla^2 l_m(\theta|y)= \dfrac{   \sum_{k=1}^m \left[ \nabla^2 \log f_\theta(u_k,y)     \right]  e^{b_k-a}  }{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}\\
++ \dfrac{   \sum_{k=1}^m \left[ \nabla \log f_\theta(u_k,y)  - \nabla l_m(\theta|y)   \right] \left[ \nabla \log f_\theta(u_k,y)  -\nabla l_m(\theta|y)  \right]^T  e^{b_k-a}}{\sum\limits_{i=1}^r j_i \ e^{v_i - a}}
 \end{multline}
 
 Then, to calculate the final hessian for the complete $u$ matrix we must sum the hessians produced by each core. 

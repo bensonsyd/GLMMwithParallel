@@ -123,7 +123,7 @@ function(par, nbeta, nu.pql, umat, u.star, mod.mcml, family.glmm, cache, p1, p2,
 	  #vs <- cbind(vs, out[[1]][[i]]$v)
 	#}
 	
-	val <- expadda*exp(a)
+	val <- expadda2
 	grad <- stuff$gradient
 	
 	cl <- makeCluster(no_cores)
