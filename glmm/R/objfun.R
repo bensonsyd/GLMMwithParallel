@@ -117,7 +117,7 @@ function(par, nbeta, nu.pql, umat, u.star, mod.mcml, family.glmm, cache, p1, p2,
 	  hessian[j] <- hessadd
 	}
 
-	if (!missing(cache)) cache$weights<-stuff$v		
+	#if (!missing(cache)) cache$weights<-stuff$v		##is this important?
 	
 	list(value=value, gradient=gradient,hessian=matrix(hessian,ncol=length(par),byrow=FALSE))
 	
