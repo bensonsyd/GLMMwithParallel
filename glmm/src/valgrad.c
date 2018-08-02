@@ -8,7 +8,7 @@
  ntrials is a vec of ints with length equal to length(y)
  */
 
-void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *value, double *gradient, double *hessian, double *bottom)
+void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *value, double *gradient, double *b)
 {
     double *Uk = Calloc(*myq, double);
     int Uindex = 0;
@@ -28,11 +28,10 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
     double lfuval = 1.1;
     double lfyuval = 1.1;
     double lfutwid = 1.1;
-    double *b = Calloc(*m,double);
     double a = 0.0;
     
     for(int k = 0; k < *m; k++){
-        /*start by getting Uk  */
+        /*start by getting Uk */
         for(int i = 0; i < *myq; i++){
             Uk[i] = Umat[Uindex];
             Uindex++;
@@ -95,19 +94,19 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
     for(int i = 0; i<*m; i++){
         tops[i] = exp(b[i]-a);
     }
-    Free(b);
     
+    double bottom = 0.0;
     for(int i = 0; i<*m; i++){
-        *bottom+= tops[i];
+        bottom+= tops[i];
     }
     /* Calculate tops/bottom */
     for(int i = 0; i<*m; i++){
-        v[i] = tops[i]/(*bottom);
+        v[i] = tops[i]/(bottom);
     }
     Free(tops);
     
     /* Calculate value */
-    *value = a-log(*m)+log(*bottom);
+    *value = a-log(*m)+log(bottom);
     
     
     /* done with value! */
@@ -157,8 +156,6 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
         
     } /* ends FIRST k loop */
     
-    
-    
     Free(Uk);
     Free(xbeta);
     Free(zu);
@@ -167,7 +164,6 @@ void valgrad(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *
     Free(lfuhess);
     Free(lfyugradient);
     Free(lfyuhess);
-    
     Free(qzeros);
     
 }

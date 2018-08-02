@@ -8,7 +8,9 @@
  ntrials is a vec of ints with length equal to length(y)
  */
 
-void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *value, double *gradient, double *hessian, double *bottom)
+// value can go?
+
+void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbeta, double *beta, double *z, double *Dinvfornu, double *logdetDinvfornu, int *family_glmm, double *Dstarinv, double *logdetDstarinv, double *ustar, double *Sigmuhinv, double *logdetSigmuhinv, double *pee, int *nps, int *T, int *nrandom, int *meow, double *nu, int *zeta, double *tconst, double *v, int *ntrials, double *gradient, double *hessian, double *b, int *length)
 {
     double *Uk = Calloc(*myq, double);
     int Uindex = 0;
@@ -28,7 +30,7 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     double lfuval = 1.1;
     double lfyuval = 1.1;
     double lfutwid = 1.1;
-    double *b = Calloc(*m,double);
+    double *q = Calloc(*m,double);
     double a = 0.0;
     
     for(int k = 0; k < *m; k++){
@@ -82,7 +84,7 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
         }
         lfutwid = log(lfutwid)+tempmax; /* finishes lfutwid calc */
         
-        b[k] = lfuval+lfyuval-lfutwid;
+        q[k] = lfuval+lfyuval-lfutwid;
         
         if(k==0){a = b[k];}
         if(b[k]>a){a = b[k];}
@@ -94,17 +96,21 @@ void hess(double *y, double *Umat, int *myq, int *m, double *x, int *n, int *nbe
     /* Calculate weights v[k] */
     double *tops = Calloc(*m, double);
     for(int i = 0; i<*m; i++){
-        tops[i] = exp(b[i]-a);
+        tops[i] = exp(q[i]-a);
     }
-    Free(b);
     
-    /* double bottom = 0.0; */
-    /* for(int i = 0; i<*m; i++){
-        *bottom+= tops[i];
-    } */
+    double *bs = Calloc(*length, double);
+    for(int i = 0; i<*length; i++){
+        bs[i] = exp(b[i]-a);
+    }
+    
+     double bottom = 0.0;
+     for(int i = 0; i<*length; i++){
+        bottom+= bs[i];
+    }
     /* Calculate tops/bottom */
     for(int i = 0; i<*m; i++){
-        v[i] = tops[i]/(*value);
+        v[i] = tops[i]/(bottom);
     }
     Free(tops);
     

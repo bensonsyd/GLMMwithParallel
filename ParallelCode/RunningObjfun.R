@@ -8,7 +8,7 @@ set.seed(1234)
 
 data("BoothHobert")
 test<-glmm(y~0+x1,list(y~0+z1),varcomps.names=c("z1"),data=BoothHobert,
-          family.glmm=bernoulli.glmm,m=6,doPQL=FALSE,debug=TRUE)
+          family.glmm=bernoulli.glmm,m=300,doPQL=FALSE,debug=TRUE)
 
 mod.mcml<-test$mod.mcml
 debug<-test$debug
@@ -184,4 +184,13 @@ expadda <- 0
 for(i in 1:no_cores){
   res[i] <- newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value - a)
   expadda <- expadda + newobj[[1]][[i]][[4]]*exp(newobj[[1]][[i]]$value - a)
+}
+
+hessian <- c(rep(0, length(newobj[[4]][[1]]$hessian)))
+for(j in 1:length(newobj[[4]][[1]]$hessian)){
+  hessadd <- 0
+  for(i in 1:no_cores){
+    hessadd <- hessadd + newobj[[4]][[i]]$hessian[j]
+  }
+  hessian[j] <- hessadd
 }
