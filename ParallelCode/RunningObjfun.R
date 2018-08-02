@@ -8,7 +8,7 @@ set.seed(1234)
 
 data("BoothHobert")
 test<-glmm(y~0+x1,list(y~0+z1),varcomps.names=c("z1"),data=BoothHobert,
-          family.glmm=bernoulli.glmm,m=300,doPQL=FALSE,debug=TRUE)
+          family.glmm=bernoulli.glmm,m=100,doPQL=FALSE,debug=TRUE)
 
 mod.mcml<-test$mod.mcml
 debug<-test$debug
